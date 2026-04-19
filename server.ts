@@ -52,6 +52,13 @@ async function startServer() {
 
   // API Route for ESP32 POST
   app.post('/api/bms', (req, res) => {
+    console.log(`[BMS] Incoming POST from ${req.ip}`);
+    
+    if (!req.body || Object.keys(req.body).length === 0) {
+      console.error('[BMS] Error: Received empty body');
+      return res.status(400).json({ error: 'Empty body' });
+    }
+
     const data = req.body as BMSData;
     data.received_at = Date.now();
 
@@ -64,12 +71,21 @@ async function startServer() {
     // Broadcast to all connected clients
     io.emit('bms_update', data);
 
-    console.log(`[BMS] Data received from ${data.device_id}. RSSI: ${data.wifi_rssi_sta}`);
+    console.log(`[BMS] Success: Received data from ${data.device_id}`);
     res.status(201).json({ status: 'ok', received: true });
   });
 
+  // Diagnostic GET route
+  app.get('/api/bms', (req, res) => {
+    res.json({ 
+      status: "online", 
+      message: "BMS API is alive. Please use POST to send data.",
+      history_count: history.length
+    });
+  });
+
   // API Route for initial history
-  app.get('/api/history', (req, res) => {
+  app.get('/api/bms-history', (req, res) => {
     res.json(history);
   });
 

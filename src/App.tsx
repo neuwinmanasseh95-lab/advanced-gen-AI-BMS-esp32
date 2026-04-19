@@ -140,14 +140,33 @@ export default function App() {
     });
 
     // Fetch initial history
-    fetch('/api/history')
-      .then(res => res.json())
-      .then(json => {
-        if (Array.isArray(json)) setHistory(json);
-      });
+    const fetchHistory = (retryCount = 0) => {
+      const url = `${window.location.origin}/api/bms-history`;
+      fetch(url)
+        .then(res => {
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          return res.json();
+        })
+        .then(json => {
+          if (Array.isArray(json) && json.length > 0) {
+            setHistory(json);
+            setData(json[json.length - 1]);
+          }
+        })
+        .catch(err => {
+          console.error(`[BMS] History fetch failed (${url}):`, err.message);
+          if (retryCount < 3) {
+            setTimeout(() => fetchHistory(retryCount + 1), 2000);
+          }
+        });
+    };
+
+    fetchHistory();
+    const interval = setInterval(fetchHistory, 5000); // Polling fallback if socket fails
 
     return () => {
       socket.disconnect();
+      clearInterval(interval);
     };
   }, []);
 
@@ -163,18 +182,47 @@ export default function App() {
   }, [history]);
 
   if (!data) {
+    const isDevUrl = window.location.hostname.includes('ais-dev-');
+
     return (
       <div className="min-h-screen bg-[#0a0a0c] text-white flex flex-col items-center justify-center font-sans p-6 text-center">
-        <Activity className="text-blue-500 animate-pulse mb-4" size={48} />
-        <h1 className="text-2xl font-light tracking-tighter mb-2">Awaiting BMS Uplink</h1>
-        <p className="text-gray-500 max-w-md text-sm font-mono uppercase tracking-widest leading-relaxed">
-          Ensure ESP32 is powered and correctly configured to post to <br/>
-          <span className="text-blue-400 break-all">{window.location.origin}/api/bms</span>
-        </p>
-        <div className="mt-8 flex gap-3 text-xs font-mono">
-          <div className="flex items-center gap-2 text-gray-600">
-            <span className={`w-2 h-2 rounded-full ${connected ? 'bg-emerald-500' : 'bg-red-500'}`} />
-            WS SERVER: {connected ? 'READY' : 'CONNECTING'}
+        <Activity className="text-blue-500 animate-pulse mb-6" size={64} />
+        <h1 className="text-3xl font-light tracking-tighter mb-4">ESP32 BMS System</h1>
+        
+        <div className="bg-card/50 p-8 rounded-2xl border border-white/5 max-w-2xl mb-8">
+          <p className="text-accent text-[10px] font-mono uppercase tracking-[0.2em] mb-4 font-bold">
+            📡 INSTRUCTIONS: CONVENTIONAL UPLINK
+          </p>
+          
+          <div className="space-y-4 text-left font-mono text-sm">
+            <div className="bg-black/40 p-4 rounded-xl border border-white/5">
+              <span className="text-gray-500 block mb-2 text-[10px] uppercase tracking-widest">1. Set this Endpoint in ESP32:</span>
+              <code className="text-blue-400 break-all select-all">
+                {window.location.origin.replace('ais-dev-', 'ais-pre-')}/api/bms
+              </code>
+            </div>
+
+            <div className="bg-black/40 p-4 rounded-xl border border-white/5">
+              <span className="text-gray-500 block mb-2 text-[10px] uppercase tracking-widest">2. Connection Mode:</span>
+              <p className="text-text-dim leading-relaxed">
+                Use <span className="text-text-main font-bold">ais-pre-</span> URL for public access. <br/>
+                Requires <span className="text-text-main font-bold">WiFiClientSecure</span> with <span className="text-text-main font-bold">setInsecure()</span>.
+              </p>
+            </div>
+          </div>
+          
+          {isDevUrl && (
+            <div className="mt-6 p-4 bg-orange-500/10 border border-orange-500/20 rounded-xl text-orange-400 text-[11px] uppercase font-bold leading-normal">
+              ⚠️ ATTENTION: YOU ARE ON A PRIVATE PREVIEW. <br/>
+              REAL-TIME BROADCASTS ONLY WORK ON THE <span className="underline italic">SHARED APP URL</span>.
+            </div>
+          )}
+        </div>
+
+        <div className="flex flex-col gap-3 text-xs font-mono">
+          <div className="flex items-center gap-2 text-gray-600 justify-center">
+            <span className={`w-2 h-2 rounded-full ${connected ? 'bg-emerald-500' : 'bg-red-500 animate-pulse'}`} />
+            STATION STATUS: {connected ? 'CONNECTED TO SERVER' : 'CONNECTING TO SERVER...'}
           </div>
         </div>
       </div>
