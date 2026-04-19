@@ -52,15 +52,6 @@ async function startServer() {
 
   // API Route for ESP32 POST
   app.post('/api/bms', (req, res) => {
-    // Authentication Check
-    const authHeader = req.headers.authorization;
-    const expectedSecret = process.env.BMS_API_SECRET;
-
-    if (expectedSecret && authHeader !== `Bearer ${expectedSecret}`) {
-      console.warn(`[Security] Unauthorized POST attempt from ${req.ip}`);
-      return res.status(401).json({ error: 'Unauthorized: Invalid API Secret' });
-    }
-
     const data = req.body as BMSData;
     data.received_at = Date.now();
 
