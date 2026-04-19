@@ -1,0 +1,6 @@
+{
+  "name": "BMS Monitor Dashboard",
+  "description": "Real-time battery management system dashboard for ESP32-based dual 4-cell lithium packs. Monitors cell voltages, current, temperature, and power.",
+  "requestFramePermissions": [],
+  "majorCapabilities": []
+}
